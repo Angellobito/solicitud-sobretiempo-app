@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.env
+assets/sctr-inicial.pdf
+assets/firma-original.png
+assets/firma-azul.png

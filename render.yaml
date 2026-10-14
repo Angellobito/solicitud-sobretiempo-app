@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: solicitud-sobretiempo
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/config
+    envVars:
+      - key: TREMOND_HOSTED
+        value: "1"
+      - key: TREMOND_ACCESS_KEY
+        sync: false
