@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Solicitud de sobretiempo | Tremond</title>
+  <style>
+    :root{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#17263d;background:#f3f6fb;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}.top{background:#12376c;color:#fff;padding:25px max(22px,calc((100% - 980px)/2));box-shadow:0 3px 14px #102b4b24}
+    .brand{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#cbdcf2;font-weight:700}.top h1{font-size:clamp(21px,4vw,29px);margin:9px 0 5px}.top p{margin:0;color:#d5e2f3;font-size:14px}
+    main{max-width:980px;margin:26px auto;padding:0 20px 42px}.card{background:#fff;border:1px solid #e0e7f0;border-radius:15px;box-shadow:0 8px 25px #1936580c;padding:24px;margin-bottom:18px}
+    .rowhead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.rowhead h2{font-size:17px;margin:0}.muted{color:#64738a;font-size:13px;line-height:1.5}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 20px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}label{font-size:13px;font-weight:650;color:#32445e}
+    input,select,textarea{width:100%;font:inherit;font-size:14px;color:#1d2e47;border:1px solid #cbd5e2;background:#fff;border-radius:8px;padding:11px 12px;outline:none}input:focus,select:focus,textarea:focus{border-color:#2867ab;box-shadow:0 0 0 3px #2867ab18}input[readonly]{background:#f3f6fa;color:#506078}textarea{min-height:83px;resize:vertical}
+    .inline{display:flex;gap:10px;align-items:center}.inline input[type=file]{padding:8px;font-size:13px;min-width:0}.button{border:0;border-radius:8px;background:#eaf0f8;color:#153765;font-weight:700;font-size:13px;padding:11px 15px;cursor:pointer;white-space:nowrap}.button:hover{filter:brightness(.97)}.button.primary{background:#174987;color:white;padding:13px 20px;font-size:14px}.button.danger{background:transparent;color:#64738a;border:1px solid #dbe2ec}.actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}.status{font-size:13px;color:#425570;min-height:20px}.status.error{color:#b42318}.status.success{color:#18794e}.badge{display:inline-flex;padding:5px 9px;border-radius:99px;background:#eef4fb;color:#34577f;font-size:12px;font-weight:700}.hint{font-size:12px;color:#73829a;line-height:1.5}.signature{height:86px;max-width:190px;object-fit:contain;object-position:left center;display:block}.sigrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.footer{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#718097;font-size:12px;padding:4px 2px}
+    @media(max-width:650px){main{margin:16px auto;padding:0 12px 28px}.card{padding:18px}.grid{grid-template-columns:1fr;gap:14px}.field.full{grid-column:auto}.rowhead{align-items:flex-start;flex-direction:column}.inline{align-items:stretch;flex-direction:column}.actions{align-items:stretch;flex-direction:column-reverse}.button.primary{width:100%}.top{padding:21px 18px}}
+    #access-gate{position:fixed;inset:0;z-index:10;background:#f3f6fb;display:grid;place-items:center;padding:20px}.gate-card{background:white;border:1px solid #dce5f0;border-radius:15px;box-shadow:0 10px 36px #19365818;padding:28px;width:min(430px,100%)}.gate-card h1{font-size:22px;margin:0 0 8px}.gate-card p{color:#64738a;font-size:14px;line-height:1.5}.gate-card label{display:block;margin:16px 0 7px}.gate-card button{margin-top:14px;width:100%}
+  </style>
+</head>
+<body>
+  <div id="access-gate"><form class="gate-card" id="access-form"><h1>Acceso de personal</h1><p>Ingresa la clave compartida de la empresa para ver la lista mensual y generar solicitudes firmadas.</p><label for="access-key">Clave de acceso</label><input id="access-key" type="password" autocomplete="current-password" required><button class="button primary" type="submit">Ingresar</button><div class="status" id="access-status" aria-live="polite"></div></form></div>
+  <header class="top"><div class="brand">Tremond · Operaciones</div><h1>Solicitud de autorización de sobretiempo</h1><p>Completa los datos y descarga el formato PDF listo para revisar.</p></header>
+  <main>
+    <section class="card">
+      <div class="rowhead"><div><h2>Personal del mes</h2><div class="muted">La lista de técnicos y documentos se toma del SCTR vigente.</div></div><span class="badge" id="people-count">Leyendo SCTR…</span></div>
+      <div class="inline"><input id="sctr-file" type="file" accept="application/pdf"><button id="upload-sctr" class="button" type="button">Actualizar SCTR</button></div>
+      <div class="hint" id="sctr-hint" style="margin-top:8px">Al cargar el SCTR nuevo se reemplaza la lista de técnicos para las próximas solicitudes.</div>
+      <div class="status" id="sctr-status" aria-live="polite"></div>
+    </section>
+    <form id="request-form">
+      <section class="card">
+        <div class="rowhead"><h2>Datos de la solicitud</h2><span class="badge">Campos con lista desplegable</span></div>
+        <div class="grid">
+          <div class="field"><label for="request-date">Fecha de solicitud</label><input id="request-date" type="date" required></div>
+          <div class="field"><label for="boss">Jefe solicitante</label><select id="boss" required></select></div>
+          <div class="field"><label for="worker">Técnico</label><select id="worker" required><option value="">Selecciona un técnico</option></select></div>
+          <div class="field"><label for="dni">DNI / documento</label><input id="dni" readonly placeholder="Se completa al elegir el técnico"></div>
+          <div class="field"><label for="role">Cargo</label><select id="role" required></select></div>
+          <div class="field"><label for="overtime-date">Fecha del sobretiempo</label><input id="overtime-date" type="date" required></div>
+          <div class="field"><label for="start-time">Hora de inicio del sobretiempo</label><input id="start-time" readonly></div>
+          <div class="field"><label for="end-time">Hora de término</label><select id="end-time" required></select></div>
+          <div class="field"><label for="duration">Total de sobretiempo</label><input id="duration" readonly></div>
+          <div class="field"><label for="day-type">Tipo de día</label><select id="day-type" required></select></div>
+          <div class="field full"><label for="reason">Motivo del sobretiempo</label><textarea id="reason" maxlength="500" required placeholder="Describe el motivo del sobretiempo"></textarea></div>
+          <div class="field full"><label for="justification">Justificación operativa</label><textarea id="justification" maxlength="500" required placeholder="Indica por qué no pudo realizarse dentro de la jornada laboral"></textarea></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="rowhead"><div><h2>Firma del solicitante</h2><div class="muted">El sello original se conserva horizontal y se coloca en el formato PDF.</div></div></div>
+        <div class="sigrow"><img class="signature" src="/firma.png" alt="Sello de firma horizontal de Cristian Ríos"><span class="hint">Cristian Ríos · Jefe de Operaciones</span></div>
+        <div class="actions"><div class="status" id="form-status" aria-live="polite"></div><button class="button primary" id="generate" type="submit">Generar y descargar PDF</button></div>
+      </section>
+    </form>
+    <div class="footer"><span id="privacy-note">La información del SCTR permanece guardada en este equipo.</span><button class="button danger" id="close-app" type="button">Cerrar aplicación</button></div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    let people = [];
+    let accessKey = '';
+    const apiFetch = (url, options={}) => fetch(url,{...options,headers:{...(options.headers||{}),Authorization:`Bearer ${accessKey}`}});
+    const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+    const dateDMY = value => { const [y,m,d]=value.split('-'); return `${d}/${m}/${y}`; };
+    function options(select, values, first='') { select.innerHTML=''; if(first){const o=document.createElement('option');o.value='';o.textContent=first;select.append(o)} values.forEach(v=>{const o=document.createElement('option');o.value=typeof v==='string'?v:v.value;o.textContent=typeof v==='string'?v:v.label;select.append(o)}); }
+    function selectedPerson(){return people.find(p=>p.name===$('worker').value)}
+    function startMinute(){ const date=new Date(`${$('overtime-date').value}T12:00:00`);const isSaturday=date.getDay()===6;const name=($('worker').value||'').toLocaleUpperCase('es');return isSaturday?810:(name.includes('JOSUE')&&name.includes('ALVA')?1110:1050); }
+    function fmt(n){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
+    function refreshTimes(){
+      if(!$('overtime-date').value||!$('worker').value){$('start-time').value='';$('end-time').innerHTML='<option value="">Elige técnico y fecha primero</option>';$('duration').value='';return}
+      const start=startMinute();$('start-time').value=fmt(start);
+      const values=[];for(let n=start+15;n<=1440;n+=15)values.push({value:String(n),label:fmt(n)});
+      options($('end-time'),values,'Selecciona hora');$('duration').value='';
+    }
+    async function loadPeople(){
+      try{const r=await apiFetch('/api/people');const data=await r.json();if(!r.ok)throw Error(data.error);people=data.people;options($('boss'),data.bosses);options($('role'),data.roles);options($('day-type'),['Día laborable','Día de descanso','Feriado']);options($('worker'),people.map(p=>p.name),'Selecciona un técnico');$('people-count').textContent=`${people.length} técnicos`;$('sctr-status').textContent='SCTR cargado.';return true}
+      catch(e){$('people-count').textContent='SCTR no disponible';setStatus('sctr-status',e.message,true);return false}
+    }
+    function setStatus(id,text,error=false,success=false){const el=$(id);el.textContent=text;el.className='status'+(error?' error':'')+(success?' success':'')}
+    $('request-date').value=todayISO();$('overtime-date').value=todayISO();$('role').innerHTML='<option>Técnico</option><option>Técnico de mantenimiento</option><option>Ayudante técnico</option><option>Supervisor</option>';$('day-type').innerHTML='<option>Día laborable</option><option>Día de descanso</option><option>Feriado</option>';
+    refreshTimes();
+    $('access-form').addEventListener('submit',async event=>{event.preventDefault();accessKey=$('access-key').value;const button=event.currentTarget.querySelector('button');button.disabled=true;setStatus('access-status','Validando clave…');if(await loadPeople()){const response=await apiFetch('/firma.png');if(response.ok){const image=URL.createObjectURL(await response.blob());document.querySelector('.signature').src=image;document.getElementById('access-gate').remove();$('sctr-status').textContent='Carga el SCTR vigente para comenzar.';if(!people.length)setStatus('sctr-status','No hay SCTR cargado todavía. Selecciona el PDF vigente.',true)}}else{accessKey='';setStatus('access-status','Clave incorrecta o no se pudo conectar.',true)}button.disabled=false});
+    (async()=>{try{const cfg=await fetch('/api/config').then(r=>r.json());if(!cfg.hosted){document.getElementById('access-gate').remove();loadPeople()}else{$('sctr-hint').textContent='El SCTR se transmite por HTTPS al servicio para leer técnicos y DNI. Solo queda en memoria hasta que el servicio se reinicie; luego se vuelve a cargar.';$('privacy-note').textContent='SCTR temporal en memoria del servicio; se elimina al reiniciarlo.';$('close-app').hidden=true}}catch(e){setStatus('access-status','No se pudo conectar con el servidor.',true)}})();
+    $('worker').addEventListener('change',()=>{$('dni').value=selectedPerson()?.dni||'';refreshTimes()});$('overtime-date').addEventListener('change',refreshTimes);
+    $('end-time').addEventListener('change',()=>{const v=Number($('end-time').value);const d=v-startMinute();$('duration').value=d>0?`${String(Math.floor(d/60)).padStart(2,'0')} h ${String(d%60).padStart(2,'0')} min`:''});
+    $('upload-sctr').addEventListener('click',async()=>{const file=$('sctr-file').files[0];if(!file){setStatus('sctr-status','Selecciona el PDF SCTR del mes.',true);return}if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){setStatus('sctr-status','El archivo debe ser PDF.',true);return}const btn=$('upload-sctr');btn.disabled=true;setStatus('sctr-status','Actualizando SCTR…');try{const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});const response=await apiFetch('/api/sctr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:file.name,data})});const result=await response.json();if(!response.ok)throw Error(result.error);people=result.people;options($('worker'),people.map(p=>p.name),'Selecciona un técnico');$('dni').value='';$('people-count').textContent=`${people.length} técnicos`;setStatus('sctr-status',result.message,false,true);refreshTimes()}catch(e){setStatus('sctr-status',e.message,true)}finally{btn.disabled=false}});
+    $('request-form').addEventListener('submit',async event=>{event.preventDefault();setStatus('form-status','');if(!$('end-time').value){setStatus('form-status','Elige la hora de término.',true);return}const btn=$('generate');btn.disabled=true;btn.textContent='Generando PDF…';try{const payload={request_date:$('request-date').value,boss:$('boss').value,worker:$('worker').value,role:$('role').value,overtime_date:$('overtime-date').value,end_minutes:$('end-time').value,day_type:$('day-type').value,reason:$('reason').value,justification:$('justification').value};const response=await apiFetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!response.ok){const error=await response.json();throw Error(error.error)}const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=response.headers.get('Content-Disposition')?.match(/filename="?([^";]+)"?/i)?.[1]||'Solicitud_Sobretiempo.pdf';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);setStatus('form-status','PDF generado y descargado.',false,true)}catch(e){setStatus('form-status',e.message,true)}finally{btn.disabled=false;btn.textContent='Generar y descargar PDF'}});
+    $('close-app').addEventListener('click',async()=>{await fetch('/api/close',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});document.body.innerHTML='<main style="max-width:700px;margin:15vh auto;padding:30px;text-align:center;font-family:Segoe UI,Arial"><h1>Aplicación cerrada</h1><p>Ya puedes cerrar esta pestaña.</p></main>'});
+  </script>
+</body>
+</html>
+
