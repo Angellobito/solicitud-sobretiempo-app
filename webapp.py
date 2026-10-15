@@ -194,6 +194,42 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self.send_json(500, {'error': str(exc)})
             return
+        if route == '/api/approval/pdf':
+            if not self.authorized():
+                self.send_json(401, {'error': 'Clave de acceso incorrecta o faltante.'})
+                return
+            if not approval_session(self):
+                self.send_json(401, {'error': 'Inicia sesión en Validación e historial.'})
+                return
+            try:
+                request_id = clean_text(parse_qs(urlparse(self.path).query).get('request_id', [''])[0], 80)
+                with closing(db_connect()) as connection, connection:
+                    row = connection.execute('SELECT * FROM overtime_requests WHERE request_id = ?', (request_id,)).fetchone()
+                if not row:
+                    self.send_json(404, {'error': 'No se encontró la solicitud.'})
+                    return
+                if row['management_status'] == 'Pendiente':
+                    self.send_json(409, {'error': 'Gerencia aún no ha registrado su decisión.'})
+                    return
+                fields = json.loads(row['request_json'])
+                temp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+                temp.close()
+                try:
+                    generate_pdf(fields, temp.name, row['management_status'], row['management_at'])
+                    data = Path(temp.name).read_bytes()
+                finally:
+                    Path(temp.name).unlink(missing_ok=True)
+                filename = f"Solicitud_Sobretiempo_{row['request_id']}_Gerencia.pdf"
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as exc:
+                self.send_json(400, {'error': str(exc)})
+            return
         if HOSTED and route in ('/api/people', '/firma.png') and not self.authorized():
             self.send_json(401, {'error': 'Clave de acceso incorrecta o faltante.'})
             return

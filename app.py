@@ -1,6 +1,7 @@
 import os, re, sys, json, shutil, tempfile, threading, webbrowser
 from pathlib import Path
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pypdf import PdfReader, PdfWriter
@@ -68,10 +69,11 @@ def fmt_time(minutes):
     return f'{minutes // 60:02d}:{minutes % 60:02d}'
 
 
-def generate_pdf(fields, output_path):
+def generate_pdf(fields, output_path, management_decision=None, management_at=None):
     root = app_root()
     template = root / 'assets' / 'plantilla.pdf'
     sign = root / 'assets' / 'firma.png'
+    management_sign = root / 'assets' / 'firma_gerencia.png'
     if not template.exists():
         raise FileNotFoundError(f'No se encuentra la plantilla: {template}')
     reader = PdfReader(str(template))
@@ -123,6 +125,21 @@ def generate_pdf(fields, output_path):
         c.drawImage(ImageReader(str(sign)), 145, 160, width=80, height=43, preserveAspectRatio=True, mask='auto', anchor='c')
     # The selected manager is also recorded under the requester signature.
     put(156, 678, fields['boss'], 130, 8.5, mask_x=151)
+    if management_decision in ('Aprobado', 'Denegado') and management_sign.exists():
+        # The supplied blue signature sits on the blank Gerencia signature line.
+        c.drawImage(ImageReader(str(management_sign)), 256, 70, width=78, height=45,
+                    preserveAspectRatio=True, mask='auto', anchor='c')
+        decision_color = (0.08, 0.38, 0.22) if management_decision == 'Aprobado' else (0.65, 0.12, 0.12)
+        c.setFillColorRGB(*decision_color)
+        c.setFont('Helvetica-Bold', 7.5)
+        label = f'DECISIÓN GERENCIA: {management_decision.upper()}'
+        if management_at:
+            try:
+                stamp = datetime.fromisoformat(management_at.replace('Z', '+00:00')).astimezone(ZoneInfo('America/Lima'))
+                label += f' · {stamp:%d/%m/%Y %H:%M}'
+            except ValueError:
+                pass
+        c.drawString(229, 48, label)
     c.save()
     overlay = PdfReader(temp.name)
     page.merge_page(overlay.pages[0])
