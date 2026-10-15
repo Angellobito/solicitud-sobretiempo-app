@@ -69,11 +69,13 @@ def fmt_time(minutes):
     return f'{minutes // 60:02d}:{minutes % 60:02d}'
 
 
-def generate_pdf(fields, output_path, management_decision=None, management_at=None):
+def generate_pdf(fields, output_path, management_decision=None, management_at=None,
+                 hr_decision=None):
     root = app_root()
     template = root / 'assets' / 'plantilla.pdf'
     sign = root / 'assets' / 'firma.png'
     management_sign = root / 'assets' / 'firma_gerencia.png'
+    hr_sign = root / 'assets' / 'firma_rrhh.png'
     if not template.exists():
         raise FileNotFoundError(f'No se encuentra la plantilla: {template}')
     reader = PdfReader(str(template))
@@ -140,6 +142,11 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
             except ValueError:
                 pass
         c.drawString(229, 48, label)
+    if hr_decision in ('Aprobado', 'Denegado') and hr_sign.exists():
+        # Keep the HR autograph on the original HR signature area of the form.
+        c.drawImage(ImageReader(str(hr_sign)), 365, 145, width=78, height=53,
+                    preserveAspectRatio=True, mask='auto', anchor='c')
+        put(356, 681, 'Denisse La Cruz Vicente', 130, 7.5, mask_x=351)
     c.save()
     overlay = PdfReader(temp.name)
     page.merge_page(overlay.pages[0])

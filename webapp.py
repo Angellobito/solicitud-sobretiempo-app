@@ -236,18 +236,24 @@ class Handler(BaseHTTPRequestHandler):
                 if not row:
                     self.send_json(404, {'error': 'No se encontró la solicitud.'})
                     return
-                if row['management_status'] == 'Pendiente':
-                    self.send_json(409, {'error': 'Gerencia aún no ha registrado su decisión.'})
+                if request_status(row) == 'Pendiente':
+                    self.send_json(409, {'error': 'La solicitud aún espera una decisión de Gerencia o Recursos Humanos.'})
                     return
                 fields = json.loads(row['request_json'])
                 temp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
                 temp.close()
                 try:
-                    generate_pdf(fields, temp.name, row['management_status'], row['management_at'])
+                    generate_pdf(
+                        fields,
+                        temp.name,
+                        row['management_status'],
+                        row['management_at'],
+                        row['hr_status'],
+                    )
                     data = Path(temp.name).read_bytes()
                 finally:
                     Path(temp.name).unlink(missing_ok=True)
-                filename = f"Solicitud_Sobretiempo_{row['request_id']}_Gerencia.pdf"
+                filename = f"Solicitud_Sobretiempo_{row['request_id']}_Final.pdf"
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/pdf')
                 self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
