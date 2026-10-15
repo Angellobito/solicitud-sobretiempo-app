@@ -21,6 +21,8 @@ ROLES = ['Técnico', 'Técnico de mantenimiento', 'Ayudante técnico', 'Supervis
 DAY_TYPES = ['Día laborable', 'Día de descanso', 'Feriado']
 MAX_BODY = 12 * 1024 * 1024
 HOSTED = os.environ.get('TREMOND_HOSTED') == '1'
+DATABASE_URL = os.environ.get('TREMOND_DATABASE_URL', '').strip()
+POSTGRES = bool(DATABASE_URL)
 HOSTED_SCTR = None
 APPROVAL_SESSIONS = {}
 APPROVAL_SESSIONS_LOCK = threading.Lock()
@@ -37,6 +39,28 @@ def overtime_db_path():
 
 
 def db_connect():
+    if POSTGRES:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        connection = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        connection.execute('''CREATE TABLE IF NOT EXISTS overtime_requests (
+            request_id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            request_json TEXT NOT NULL,
+            management_status TEXT NOT NULL DEFAULT 'Pendiente',
+            management_at TEXT,
+            hr_status TEXT NOT NULL DEFAULT 'Pendiente',
+            hr_at TEXT
+        )''')
+        connection.execute('''CREATE TABLE IF NOT EXISTS overtime_events (
+            event_id BIGSERIAL PRIMARY KEY,
+            request_id TEXT NOT NULL REFERENCES overtime_requests(request_id),
+            reviewer_role TEXT NOT NULL,
+            decision TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )''')
+        return connection
     connection = sqlite3.connect(overtime_db_path(), timeout=15)
     connection.row_factory = sqlite3.Row
     connection.execute('PRAGMA journal_mode=WAL')
@@ -60,6 +84,10 @@ def db_connect():
     return connection
 
 
+def db_sql(sql):
+    return sql.replace('?', '%s') if POSTGRES else sql
+
+
 def iso_now():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
@@ -77,7 +105,7 @@ def save_request(fields):
     created_at = iso_now()
     with closing(db_connect()) as connection, connection:
         connection.execute(
-            'INSERT INTO overtime_requests(request_id, created_at, request_json) VALUES (?, ?, ?)',
+            db_sql('INSERT INTO overtime_requests(request_id, created_at, request_json) VALUES (?, ?, ?)'),
             (request_id, created_at, json.dumps(fields, ensure_ascii=False)),
         )
     return request_id
@@ -97,9 +125,9 @@ def approval_session(handler):
 
 def list_requests():
     with closing(db_connect()) as connection, connection:
-        rows = connection.execute('SELECT * FROM overtime_requests ORDER BY created_at DESC').fetchall()
+        rows = connection.execute(db_sql('SELECT * FROM overtime_requests ORDER BY created_at DESC')).fetchall()
         events = connection.execute(
-            'SELECT request_id, reviewer_role, decision, created_at FROM overtime_events ORDER BY event_id'
+            db_sql('SELECT request_id, reviewer_role, decision, created_at FROM overtime_events ORDER BY event_id')
         ).fetchall()
     event_map = {}
     for event in events:
@@ -178,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(200, {
                 'hosted': HOSTED,
                 'approval_enabled': bool(os.environ.get('TREMOND_APPROVAL_PASSWORD')),
-                'persistent_approvals': os.environ.get('TREMOND_PERSISTENT_STORAGE') == '1',
+                'persistent_approvals': POSTGRES or os.environ.get('TREMOND_PERSISTENT_STORAGE') == '1',
             })
             return
         if route == '/api/approval/requests':
@@ -204,7 +232,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 request_id = clean_text(parse_qs(urlparse(self.path).query).get('request_id', [''])[0], 80)
                 with closing(db_connect()) as connection, connection:
-                    row = connection.execute('SELECT * FROM overtime_requests WHERE request_id = ?', (request_id,)).fetchone()
+                    row = connection.execute(db_sql('SELECT * FROM overtime_requests WHERE request_id = ?'), (request_id,)).fetchone()
                 if not row:
                     self.send_json(404, {'error': 'No se encontró la solicitud.'})
                     return
@@ -322,13 +350,13 @@ class Handler(BaseHTTPRequestHandler):
                 now = iso_now()
                 with closing(db_connect()) as connection, connection:
                     cursor = connection.execute(
-                        f'UPDATE overtime_requests SET {column} = ?, {timestamp_column} = ? WHERE request_id = ?',
+                        db_sql(f'UPDATE overtime_requests SET {column} = ?, {timestamp_column} = ? WHERE request_id = ?'),
                         (decision, now, request_id),
                     )
                     if cursor.rowcount != 1:
                         raise ValueError('No se encontró la solicitud.')
                     connection.execute(
-                        'INSERT INTO overtime_events(request_id, reviewer_role, decision, created_at) VALUES (?, ?, ?, ?)',
+                        db_sql('INSERT INTO overtime_events(request_id, reviewer_role, decision, created_at) VALUES (?, ?, ?, ?)'),
                         (request_id, session['role'], decision, now),
                     )
                 self.send_json(200, {'message': 'Validación guardada.', 'requests': list_requests()})

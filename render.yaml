@@ -15,3 +15,5 @@ services:
         value: /var/data
       - key: TREMOND_PERSISTENT_STORAGE
         value: "0"
+      - key: TREMOND_DATABASE_URL
+        sync: false
