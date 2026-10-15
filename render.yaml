@@ -9,3 +9,9 @@ services:
         value: "1"
       - key: TREMOND_ACCESS_KEY
         sync: false
+      - key: TREMOND_APPROVAL_PASSWORD
+        sync: false
+      - key: TREMOND_DATA_DIR
+        value: /var/data
+      - key: TREMOND_PERSISTENT_STORAGE
+        value: "0"

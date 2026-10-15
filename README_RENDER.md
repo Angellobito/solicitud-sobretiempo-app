@@ -1,15 +1,19 @@
-# Publicación privada en Render
+# Solicitud de sobretiempo - Tremond
 
-Este proyecto usa un servidor web protegido por una clave compartida. El repositorio debe crearse como **privado**, ya que incluye la imagen de firma y la plantilla de la empresa.
+Aplicación web para generar el formato PDF y registrar la validación de Gerencia y Recursos Humanos.
 
-## Publicar
+## Configuración de Render
 
-1. Sube el contenido de este paquete a un repositorio **privado** de GitHub.
-2. En Render, crea un servicio nuevo con **Blueprint** y conecta ese repositorio. Render detectará `render.yaml` y `Dockerfile`.
-3. Cuando Render solicite `TREMOND_ACCESS_KEY`, crea una clave aleatoria larga y compártela solo con el personal que usará la aplicación.
-4. Espera a que termine el despliegue. Render mostrará la URL pública `https://...onrender.com`.
-5. Abre la URL, ingresa la clave y carga el SCTR vigente. El SCTR solo permanece en memoria del proceso de Render y debe cargarse otra vez si Render reinicia el servicio.
+- `TREMOND_HOSTED=1`
+- `TREMOND_ACCESS_KEY`: clave de acceso del personal.
+- `TREMOND_APPROVAL_PASSWORD`: clave para el panel de validación. Se configura como secreto en el panel de Render; nunca se incluye en este repositorio.
+- `TREMOND_DATA_DIR=/var/data`: ubicación de la base SQLite.
+- `TREMOND_PERSISTENT_STORAGE=1` solo después de adjuntar un disco persistente montado en `/var/data`.
 
-La lista SCTR y la firma solo se sirven a quien presenta la clave. Las solicitudes se generan en el servidor y se descargan en el navegador. No se escriben PDFs del SCTR en el disco de la instancia. Usa HTTPS de Render.
+El estado final es **Aprobado** únicamente cuando Gerencia y Recursos Humanos aprueban. Si cualquiera deniega, el resultado final es **Denegado**. Se conserva un registro de cada decisión y cambio.
 
-La cuenta de GitHub/Render y la clave del servicio son responsabilidad del titular. El código no incluye credenciales. Para usuarios de la página, solo se distribuye la clave compartida; nunca la imagen de firma por separado.
+## Persistencia del historial
+
+Render Free usa un sistema de archivos efímero: al dormir, reiniciarse o desplegarse el servicio se pierden los archivos locales. Por eso el panel avisa que el historial no es permanente mientras no se configure almacenamiento persistente. Un disco de Render requiere un servicio de pago; no habilitarlo sin aprobación del titular.
+
+El repositorio público incluye los archivos de la plantilla y la imagen del sello/firma usados por el PDF.
