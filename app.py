@@ -259,7 +259,7 @@ class App(tk.Tk):
         self.status.grid(row=16, column=0, columnspan=4, sticky='w', pady=(7, 0))
         for col in (1,3): wrap.columnconfigure(col, weight=1)
         self.worker_combo.bind('<<ComboboxSelected>>', self._worker_changed)
-        self.end_combo.bind('<<ComboboxSelected>>', self._refresh_calculations)
+        self.end_combo.bind('<KeyRelease>', self._refresh_calculations)
         self.date_combos['overtime_date'].bind('<<ComboboxSelected>>', self._date_changed)
 
     def _field(self, parent, row, col, label, key, values, width=25, readonly=False):
@@ -268,7 +268,7 @@ class App(tk.Tk):
             self.worker_combo = ttk.Combobox(parent, textvariable=self.vars[key], values=values, state='readonly', width=width)
             widget = self.worker_combo
         elif key == 'end_time':
-            self.end_combo = ttk.Combobox(parent, textvariable=self.vars[key], values=values, state='readonly', width=width)
+            self.end_combo = ttk.Entry(parent, textvariable=self.vars[key], width=width)
             widget = self.end_combo
         else:
             widget = ttk.Combobox(parent, textvariable=self.vars[key], values=values, state='readonly', width=width)
@@ -325,13 +325,10 @@ class App(tk.Tk):
             return
         start = scheduled_start(d, self.vars['worker'].get())
         self.vars['start_time'].set(fmt_time(start))
-        options = [fmt_time(m) for m in range(start + 15, 24*60, 15)]
-        self.end_combo['values'] = options
-        if options and self.vars['end_time'].get() not in options:
-            self.vars['end_time'].set(options[0])
         try:
-            end = self.vars['end_time'].get()
-            eh, em = map(int, end.split(':'))
+            eh, em = map(int, self.vars['end_time'].get().split(':'))
+            if not 0 <= eh <= 23 or not 0 <= em <= 59:
+                raise ValueError
             delta = eh*60 + em - start
             self.vars['duration'].set(f'{delta//60:02d} h {delta%60:02d} min' if delta > 0 else '')
         except Exception:
@@ -348,7 +345,18 @@ class App(tk.Tk):
             messagebox.showerror(APP_NAME, 'Completa el motivo y la justificación.')
             return
         if not self.vars['end_time'].get():
-            messagebox.showerror(APP_NAME, 'Selecciona la hora de término.')
+            messagebox.showerror(APP_NAME, 'Escribe la hora de término como HH:MM, en formato de 24 horas.')
+            return
+        try:
+            end_hour, end_minute = map(int, self.vars['end_time'].get().split(':'))
+            if not 0 <= end_hour <= 23 or not 0 <= end_minute <= 59:
+                raise ValueError
+            end_value = end_hour * 60 + end_minute
+            start_value = int(self.vars['start_time'].get()[:2]) * 60 + int(self.vars['start_time'].get()[3:])
+            if end_value <= start_value:
+                raise ValueError
+        except (ValueError, IndexError):
+            messagebox.showerror(APP_NAME, 'Ingresa una hora válida HH:MM posterior a la hora de inicio.')
             return
         path = filedialog.asksaveasfilename(title='Guardar solicitud en PDF', initialdir=str(Path.home() / 'Documents'), initialfile=f"Solicitud_Sobretiempo_{self.vars['worker'].get().replace(' ','_')}_{self.vars['overtime_date'].get().replace('/','-')}.pdf", defaultextension='.pdf', filetypes=[('PDF','*.pdf')])
         if not path: return
@@ -365,7 +373,7 @@ class App(tk.Tk):
             messagebox.showerror('Error al generar el PDF', str(e))
 
     def show_rules(self):
-        messagebox.showinfo('Horarios configurados', 'De lunes a viernes: sobretiempo desde las 5:30 p. m. (Josué Alva desde las 6:30 p. m.).\nSábados: desde la 1:30 p. m.\nLa jornada regular indicada se considera de 8:00 a. m. El total se calcula hasta la hora de término seleccionada.')
+        messagebox.showinfo('Horarios configurados', 'De lunes a viernes: sobretiempo desde las 5:30 p. m. (Josué Alva desde las 6:30 p. m.).\nSábados: desde la 1:30 p. m.\nEscribe manualmente la hora de término como HH:MM (24 horas). El total se calcula hasta esa hora.')
 
 
 if __name__ == '__main__':
