@@ -131,12 +131,12 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
 
     # Place each signature inside its own signature line without covering the labels or names.
     if sign.exists():
-        c.drawImage(ImageReader(str(sign)), 168, 172, width=70, height=30,
+        c.drawImage(ImageReader(str(sign)), 150, 166, width=125, height=34,
                     preserveAspectRatio=True, mask='auto', anchor='c')
     # The selected manager is also recorded under the requester signature.
     put(156, 679, fields['boss'], 126, 8.5, mask_x=152, mask_width=130)
     if management_decision in ('Aprobado', 'Denegado') and management_sign.exists():
-        c.drawImage(ImageReader(str(management_sign)), 296, 84, width=44, height=25,
+        c.drawImage(ImageReader(str(management_sign)), 260, 76, width=120, height=32,
                     preserveAspectRatio=True, mask='auto', anchor='c')
         decision_color = (0.08, 0.38, 0.22) if management_decision == 'Aprobado' else (0.65, 0.12, 0.12)
         c.setFillColorRGB(*decision_color)
@@ -150,7 +150,7 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
                 pass
         c.drawString(229, 48, label)
     if hr_decision in ('Aprobado', 'Denegado') and hr_sign.exists():
-        c.drawImage(ImageReader(str(hr_sign)), 389, 172, width=40, height=27,
+        c.drawImage(ImageReader(str(hr_sign)), 355, 168, width=110, height=34,
                     preserveAspectRatio=True, mask='auto', anchor='c')
         put(359, 681, 'Denisse La Cruz Vicente', 127, 7.5, mask_x=358, mask_width=130)
     c.save()
