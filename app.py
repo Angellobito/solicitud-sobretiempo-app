@@ -129,15 +129,51 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
     c.setFont('Helvetica-Bold', 6.5)
     c.drawCentredString(type_x, height - 534.5 - 6.5 + 1.5, 'X')
 
-    # Place each signature inside its own signature line without covering the labels or names.
+    # Rebuild the lower approval area with taller signature spaces while keeping its two-column structure.
+    c.setFillColor(white)
+    c.rect(104, height - 704, 390, 62, fill=1, stroke=0)
+    c.rect(208, 0, 292, height - 709, fill=1, stroke=0)
+
+    def signature_text(x, top, text, font='Times-Roman', size=9):
+        c.setFillColor(black)
+        c.setFont(font, size)
+        c.drawString(x, height - top - size + 1.5, text)
+
+    def signature_rule(x1, x2, top):
+        c.setStrokeColor(black)
+        c.setLineWidth(.45)
+        y = height - top
+        c.line(x1, y, x2, y)
+
     if sign.exists():
-        c.drawImage(ImageReader(str(sign)), 150, 166, width=125, height=34,
+        c.drawImage(ImageReader(str(sign)), 145, height - 690, width=120, height=44,
                     preserveAspectRatio=True, mask='auto', anchor='c')
-    # The selected manager is also recorded under the requester signature.
-    put(156, 679, fields['boss'], 126, 8.5, mask_x=152, mask_width=130)
+    if hr_decision in ('Aprobado', 'Denegado') and hr_sign.exists():
+        c.drawImage(ImageReader(str(hr_sign)), 350, height - 690, width=96, height=44,
+                    preserveAspectRatio=True, mask='auto', anchor='c')
+
+    signature_text(114.5, 683, 'Firma:', size=9)
+    signature_rule(144, 264, 691)
+    signature_text(114.5, 696, 'Nombre:', size=9)
+    signature_text(156, 696, fields['boss'], size=9)
+    signature_rule(155, 264, 704)
+    signature_text(320, 683, 'Firma:', size=9)
+    signature_rule(350, 470, 691)
+    signature_text(320, 696, 'Nombre:', size=9)
+    if hr_decision in ('Aprobado', 'Denegado'):
+        signature_text(359, 696, 'Denisse La Cruz Vicente', size=7.5)
+    signature_rule(359, 488, 704)
+
+    signature_text(229, 726, 'Aprobado por:', 'Times-Bold', 9.5)
+    signature_text(229, 738, 'Gerencia / Administración', size=9)
     if management_decision in ('Aprobado', 'Denegado') and management_sign.exists():
-        c.drawImage(ImageReader(str(management_sign)), 260, 76, width=120, height=32,
+        c.drawImage(ImageReader(str(management_sign)), 270, height - 787, width=90, height=38,
                     preserveAspectRatio=True, mask='auto', anchor='c')
+    signature_text(229, 783, 'Firma:', size=9)
+    signature_rule(258, 399, 791)
+    signature_text(229, 797, 'Nombre:', size=9)
+    signature_rule(270, 399, 805)
+    if management_decision in ('Aprobado', 'Denegado'):
         decision_color = (0.08, 0.38, 0.22) if management_decision == 'Aprobado' else (0.65, 0.12, 0.12)
         c.setFillColorRGB(*decision_color)
         c.setFont('Helvetica-Bold', 7.5)
@@ -148,11 +184,7 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
                 label += f' · {stamp:%d/%m/%Y %H:%M}'
             except ValueError:
                 pass
-        c.drawString(229, 48, label)
-    if hr_decision in ('Aprobado', 'Denegado') and hr_sign.exists():
-        c.drawImage(ImageReader(str(hr_sign)), 355, 168, width=110, height=34,
-                    preserveAspectRatio=True, mask='auto', anchor='c')
-        put(359, 681, 'Denisse La Cruz Vicente', 127, 7.5, mask_x=358, mask_width=130)
+        c.drawString(229, height - 826, label)
     c.save()
     overlay = PdfReader(temp.name)
     page.merge_page(overlay.pages[0])
