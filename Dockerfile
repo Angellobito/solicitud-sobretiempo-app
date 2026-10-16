@@ -5,6 +5,6 @@ COPY requirements-web.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py webapp.py ./
 COPY web ./web
-COPY assets/firma.png assets/firma_gerencia.png assets/plantilla.pdf ./assets/
+COPY assets/firma.png assets/firma_gerencia.png assets/firma_rrhh.png assets/plantilla.pdf ./assets/
 EXPOSE 10000
 CMD ["python", "webapp.py"]

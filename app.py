@@ -69,11 +69,13 @@ def fmt_time(minutes):
     return f'{minutes // 60:02d}:{minutes % 60:02d}'
 
 
-def generate_pdf(fields, output_path, management_decision=None, management_at=None):
+def generate_pdf(fields, output_path, management_decision=None, management_at=None,
+                 hr_decision=None):
     root = app_root()
     template = root / 'assets' / 'plantilla.pdf'
     sign = root / 'assets' / 'firma.png'
     management_sign = root / 'assets' / 'firma_gerencia.png'
+    hr_sign = root / 'assets' / 'firma_rrhh.png'
     if not template.exists():
         raise FileNotFoundError(f'No se encuentra la plantilla: {template}')
     reader = PdfReader(str(template))
@@ -83,51 +85,58 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
     temp.close()
     c = canvas.Canvas(temp.name, pagesize=(width, height))
 
-    def put(x, top, text, max_width=300, font_size=8.5, mask_x=None):
+    def put(x, top, text, max_width=300, font_size=8.5, mask_x=None,
+            mask_width=None, mask=True):
         text = str(text)
         size = font_size
-        while size > 6 and c.stringWidth(text, 'Helvetica', size) > max_width:
-            size -= .25
+        while size > 5.5 and c.stringWidth(text, 'Helvetica', size) > max_width:
+            size = max(5.5, size - .25)
         baseline = height - top - size + 1.5
-        c.setFillColor(white)
-        left = x - 1 if mask_x is None else mask_x
-        c.rect(left, baseline - 5.5, max_width + (x - left) + 1, size + 7, fill=1, stroke=0)
+        if mask:
+            c.setFillColor(white)
+            left = x - 1 if mask_x is None else mask_x
+            clear_width = max_width + 2 if mask_width is None else mask_width
+            c.rect(left, baseline - 5.5, clear_width, size + 7, fill=1, stroke=0)
         c.setFillColor(black)
         c.setFont('Helvetica', size)
         c.drawString(x, baseline, text)
 
-    # Cover only the blank underlines; original template artwork and wording stay intact.
-    put(203, 119, fields['request_date'], 165)
-    put(190, 161, fields['boss'], 120)
-    put(202, 203, fields['worker'], 240, 8)
-    put(142, 224, fields['dni'], 180)
-    put(150, 246, fields['role'], 220)
-    put(221, 287, fields['overtime_date'], 210)
-    put(183, 308, fields['start_time'], 205)
-    put(193, 329, fields['end_time'], 205)
-    put(214, 350, fields['duration'], 205)
+    # Fill each printed field within its actual underline, keeping the template labels visible.
+    field_width = 118
+    put(203, 120, fields['request_date'], field_width, mask_x=202, mask_width=120)
+    put(190, 162, fields['boss'], field_width, mask_x=189, mask_width=120)
+    put(203, 204, fields['worker'], field_width, 8, mask_x=202, mask_width=121)
+    put(142, 225, fields['dni'], field_width, mask_x=141, mask_width=121)
+    put(151, 246, fields['role'], field_width, mask_x=150, mask_width=121)
+    put(222, 288, fields['overtime_date'], field_width, mask_x=221, mask_width=122)
+    put(183, 309, fields['start_time'], field_width, mask_x=182, mask_width=121)
+    put(194, 330, fields['end_time'], field_width, mask_x=193, mask_width=121)
+    put(215, 351, fields['duration'], field_width, mask_x=214, mask_width=121)
 
-    reason_lines = simpleSplit(fields['reason'].strip(), 'Helvetica', 8.2, 470)
+    # Text sits just above the form's ruled lines and stays inside their 425 pt width.
+    reason_lines = simpleSplit(fields['reason'].strip(), 'Helvetica', 8.2, 410)
+    justification_lines = simpleSplit(fields['justification'].strip(), 'Helvetica', 8.2, 410)
+    if len(reason_lines) > 3 or len(justification_lines) > 2:
+        raise ValueError('Acorta el motivo o la justificación para que quepan en las líneas del formato.')
     for i, line in enumerate(reason_lines):
-        put(98, 392 + i * 21, line, 480, 8.2, mask_x=84)
-    justification_lines = simpleSplit(fields['justification'].strip(), 'Helvetica', 8.2, 470)
+        put(98, 390 + i * 21, line, 410, 8.2, mask=False)
     for i, line in enumerate(justification_lines):
-        put(98, 481 + i * 21, line, 480, 8.2, mask_x=84)
+        put(98, 474 + i * 21, line, 410, 8.2, mask=False)
 
     # Mark the selected day type with X as requested.
     type_x = {'Día laborable': 89.4, 'Día de descanso': 173.6, 'Feriado': 272.0}[fields['day_type']]
     c.setFillColor(black)
-    c.setFont('Helvetica-Bold', 10)
-    c.drawCentredString(type_x, height - 545.5, 'X')
+    c.setFont('Helvetica-Bold', 6.5)
+    c.drawCentredString(type_x, height - 534.5 - 6.5 + 1.5, 'X')
 
-    # Keep the supplied horizontal signature stamp inside the requester signature space.
+    # Place each signature inside its own signature line without covering the labels or names.
     if sign.exists():
-        c.drawImage(ImageReader(str(sign)), 145, 160, width=80, height=43, preserveAspectRatio=True, mask='auto', anchor='c')
+        c.drawImage(ImageReader(str(sign)), 168, 172, width=70, height=30,
+                    preserveAspectRatio=True, mask='auto', anchor='c')
     # The selected manager is also recorded under the requester signature.
-    put(156, 678, fields['boss'], 130, 8.5, mask_x=151)
+    put(156, 679, fields['boss'], 126, 8.5, mask_x=152, mask_width=130)
     if management_decision in ('Aprobado', 'Denegado') and management_sign.exists():
-        # The supplied blue signature sits on the blank Gerencia signature line.
-        c.drawImage(ImageReader(str(management_sign)), 256, 70, width=78, height=45,
+        c.drawImage(ImageReader(str(management_sign)), 296, 84, width=44, height=25,
                     preserveAspectRatio=True, mask='auto', anchor='c')
         decision_color = (0.08, 0.38, 0.22) if management_decision == 'Aprobado' else (0.65, 0.12, 0.12)
         c.setFillColorRGB(*decision_color)
@@ -140,6 +149,10 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
             except ValueError:
                 pass
         c.drawString(229, 48, label)
+    if hr_decision in ('Aprobado', 'Denegado') and hr_sign.exists():
+        c.drawImage(ImageReader(str(hr_sign)), 389, 172, width=40, height=27,
+                    preserveAspectRatio=True, mask='auto', anchor='c')
+        put(359, 681, 'Denisse La Cruz Vicente', 127, 7.5, mask_x=358, mask_width=130)
     c.save()
     overlay = PdfReader(temp.name)
     page.merge_page(overlay.pages[0])
