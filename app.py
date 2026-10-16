@@ -172,7 +172,8 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
     signature_text(229, 783, 'Firma:', size=9)
     signature_rule(258, 399, 791)
     signature_text(229, 797, 'Nombre:', size=9)
-    signature_text(270, 797, 'Daniel Ludeña Ocas', size=9)
+    if management_decision == 'Aprobado':
+        signature_text(270, 797, 'Daniel Ludeña Ocas', size=9)
     signature_rule(270, 399, 805)
     if management_decision in ('Aprobado', 'Denegado'):
         decision_color = (0.08, 0.38, 0.22) if management_decision == 'Aprobado' else (0.65, 0.12, 0.12)
