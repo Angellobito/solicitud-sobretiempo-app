@@ -167,7 +167,7 @@ def generate_pdf(fields, output_path, management_decision=None, management_at=No
     signature_text(229, 726, 'Aprobado por:', 'Times-Bold', 9.5)
     signature_text(229, 738, 'Gerencia / Administración', size=9)
     if management_decision in ('Aprobado', 'Denegado') and management_sign.exists():
-        c.drawImage(ImageReader(str(management_sign)), 270, height - 787, width=90, height=38,
+        c.drawImage(ImageReader(str(management_sign)), 320, height - 792, width=140, height=62,
                     preserveAspectRatio=True, mask='auto', anchor='c')
     signature_text(229, 783, 'Firma:', size=9)
     signature_rule(258, 399, 791)
